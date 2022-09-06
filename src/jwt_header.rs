@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::common::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub(crate) struct JWTHeader {
+pub struct JWTHeader {
     #[serde(rename = "alg")]
     pub(crate) algorithm: String,
 
@@ -14,7 +14,7 @@ pub(crate) struct JWTHeader {
     pub(crate) key_id: Option<String>,
 
     #[serde(rename = "typ", default, skip_serializing_if = "Option::is_none")]
-    pub(crate) signature_type: Option<String>,
+    pub signature_type: Option<String>,
 
     #[serde(rename = "crit", default, skip_serializing_if = "Option::is_none")]
     pub(crate) critical: Option<Vec<String>>,

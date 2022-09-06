@@ -340,6 +340,8 @@ pub mod prelude {
     #[cfg(feature = "cwt")]
     pub use crate::cwt_token::*;
     pub use crate::token::*;
+    pub use crate::jwt_header::JWTHeader;
+    pub use crate::jwk::*;
 
     mod hashset_from_strings {
         use std::collections::HashSet;
