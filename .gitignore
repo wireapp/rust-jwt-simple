@@ -2,3 +2,9 @@
 Cargo.lock
 *~
 .vscode/
+
+# Idea
+.idea
+*.iws
+*.iml
+*.ipr
