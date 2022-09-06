@@ -164,8 +164,16 @@ pub trait ECDSAP256KeyPairLike {
         &self,
         claims: JWTClaims<CustomClaims>,
     ) -> Result<String, Error> {
-        let jwt_header = JWTHeader::new(Self::jwt_alg_name().to_string(), self.key_id().clone())
-            .with_metadata(self.metadata());
+        let header = JWTHeader::new(Self::jwt_alg_name().to_string(), self.key_id().clone());
+        self.sign_with_header(claims, header)
+    }
+
+    fn sign_with_header<CustomClaims: Serialize + DeserializeOwned>(
+        &self,
+        claims: JWTClaims<CustomClaims>,
+        header: JWTHeader,
+    ) -> Result<String, Error> {
+        let jwt_header = header.with_metadata(self.metadata());
         Token::build(&jwt_header, claims, |authenticated| {
             let mut digest = hmac_sha256::Hash::new();
             digest.update(authenticated.as_bytes());
