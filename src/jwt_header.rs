@@ -1,32 +1,33 @@
 use serde::{Deserialize, Serialize};
 
 use crate::common::*;
+use crate::jwk::Jwk;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JWTHeader {
     #[serde(rename = "alg")]
-    pub(crate) algorithm: String,
+    pub algorithm: String,
 
     #[serde(rename = "cty", default, skip_serializing_if = "Option::is_none")]
-    pub(crate) content_type: Option<String>,
+    pub content_type: Option<String>,
 
     #[serde(rename = "kid", default, skip_serializing_if = "Option::is_none")]
-    pub(crate) key_id: Option<String>,
+    pub key_id: Option<String>,
 
     #[serde(rename = "typ", default, skip_serializing_if = "Option::is_none")]
     pub signature_type: Option<String>,
 
     #[serde(rename = "crit", default, skip_serializing_if = "Option::is_none")]
-    pub(crate) critical: Option<Vec<String>>,
+    pub critical: Option<Vec<String>>,
 
     #[serde(rename = "x5c", default, skip_serializing_if = "Option::is_none")]
-    pub(crate) certificate_chain: Option<Vec<String>>,
+    pub certificate_chain: Option<Vec<String>>,
 
     #[serde(rename = "jku", default, skip_serializing_if = "Option::is_none")]
     pub key_set_url: Option<String>,
 
     #[serde(rename = "jwk", default, skip_serializing_if = "Option::is_none")]
-    pub public_key: Option<String>,
+    pub public_key: Option<Jwk>,
 
     #[serde(rename = "x5u", default, skip_serializing_if = "Option::is_none")]
     pub certificate_url: Option<String>,
@@ -36,6 +37,10 @@ pub struct JWTHeader {
 
     #[serde(rename = "x5t#S256", default, skip_serializing_if = "Option::is_none")]
     pub certificate_sha256_thumbprint: Option<String>,
+
+    /// Custom claims
+    #[serde(flatten)]
+    pub custom: Option<serde_json::Value>,
 }
 
 impl Default for JWTHeader {
@@ -52,6 +57,7 @@ impl Default for JWTHeader {
             certificate_sha256_thumbprint: None,
             signature_type: Some("JWT".to_string()),
             critical: None,
+            custom: None,
         }
     }
 }

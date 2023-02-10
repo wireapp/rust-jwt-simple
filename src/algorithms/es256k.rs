@@ -164,7 +164,7 @@ pub trait ECDSAP256kKeyPairLike {
         header: JWTHeader,
     ) -> Result<String, Error> {
         let jwt_header = header.with_metadata(self.metadata());
-        Token::build(&jwt_header, claims, |authenticated| {
+        Token::build(&jwt_header, Some(claims), |authenticated| {
             let mut digest = hmac_sha256::Hash::new();
             digest.update(authenticated.as_bytes());
             let mut rng = rand::thread_rng();

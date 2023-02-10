@@ -76,7 +76,7 @@ pub trait MACLike {
         header: JWTHeader,
     ) -> Result<String, Error> {
         let jwt_header = header.with_metadata(self.metadata());
-        Token::build(&jwt_header, claims, |authenticated| {
+        Token::build(&jwt_header, Some(claims), |authenticated| {
             Ok(self.authentication_tag(authenticated))
         })
     }
