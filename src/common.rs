@@ -4,6 +4,7 @@ use coarsetime::{Duration, UnixTimeStamp};
 use ct_codecs::{Base64UrlSafeNoPadding, Decoder, Encoder, Hex};
 
 use crate::{claims::DEFAULT_TIME_TOLERANCE_SECS, error::*};
+use crate::jwk::Jwk;
 
 pub const DEFAULT_MAX_TOKEN_LENGTH: usize = 1_000_000;
 
@@ -73,7 +74,7 @@ impl Default for VerificationOptions {
 #[derive(Debug, Clone, Default)]
 pub struct KeyMetadata {
     pub(crate) key_set_url: Option<String>,
-    pub(crate) public_key: Option<String>,
+    pub(crate) public_key: Option<Jwk>,
     pub(crate) certificate_url: Option<String>,
     pub(crate) certificate_sha1_thumbprint: Option<String>,
     pub(crate) certificate_sha256_thumbprint: Option<String>,
@@ -87,8 +88,8 @@ impl KeyMetadata {
     }
 
     /// Add a public key to the metadata ("jwk")
-    pub fn with_public_key(mut self, public_key: impl ToString) -> Self {
-        self.public_key = Some(public_key.to_string());
+    pub fn with_public_key(mut self, public_key: impl Into<Jwk>) -> Self {
+        self.public_key = Some(public_key.into());
         self
     }
 

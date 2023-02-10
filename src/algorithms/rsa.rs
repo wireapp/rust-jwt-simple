@@ -169,7 +169,7 @@ pub trait RSAKeyPairLike {
         header: JWTHeader,
     ) -> Result<String, Error> {
         let jwt_header = header.with_metadata(self.metadata());
-        Token::build(&jwt_header, claims, |authenticated| {
+        Token::build(&jwt_header, Some(claims), |authenticated| {
             let digest = Self::hash(authenticated.as_bytes());
             let mut rng = rand::thread_rng();
             let token =
