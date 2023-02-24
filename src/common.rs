@@ -48,6 +48,9 @@ pub struct VerificationOptions {
 
     /// Maximum token length to accept
     pub max_token_length: Option<usize>,
+
+    /// Maximum header length to accept
+    pub max_header_length: Option<usize>,
 }
 
 impl Default for VerificationOptions {
@@ -64,6 +67,7 @@ impl Default for VerificationOptions {
             time_tolerance: Some(Duration::from_secs(DEFAULT_TIME_TOLERANCE_SECS)),
             max_validity: None,
             max_token_length: Some(DEFAULT_MAX_TOKEN_LENGTH),
+            max_header_length: None,
         }
     }
 }
