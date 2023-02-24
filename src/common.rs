@@ -49,7 +49,7 @@ pub struct VerificationOptions {
     /// Maximum token length to accept
     pub max_token_length: Option<usize>,
 
-    /// Maximum header length to accept
+    /// Maximum unsafe, untrusted, unverified JWT header length to accept
     pub max_header_length: Option<usize>,
 }
 
