@@ -6,7 +6,9 @@ use hmac_sha256::Hash as SHA256;
 use hmac_sha512::sha384::Hash as SHA384;
 use hmac_sha512::Hash as SHA512;
 use rsa::pkcs1::{DecodeRsaPrivateKey as _, DecodeRsaPublicKey};
-use rsa::pkcs8::{DecodePrivateKey as _, DecodePublicKey as _, EncodePrivateKey as _};
+use rsa::pkcs8::{
+    DecodePrivateKey as _, DecodePublicKey as _, EncodePrivateKey as _, EncodePublicKey,
+};
 use rsa::{BigUint, PublicKey as _, PublicKeyParts as _};
 use serde::{de::DeserializeOwned, Serialize};
 #[allow(unused_imports)]
