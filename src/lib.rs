@@ -364,6 +364,7 @@ pub mod prelude {
 mod tests {
     use crate::prelude::*;
 
+    #[cfg(feature = "rsa")]
     const RSA_KP_PEM: &str = r"
 -----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAyqq0N5u8Jvl+BLH2VMP/NAv/zY9T8mSq0V2Gk5Ql5H1a+4qi
@@ -394,6 +395,7 @@ PBziuVURslNyLdlFsFlm/kfvX+4Cxrbb+pAGETtRTgmAoCDbvuDGRQ==
 -----END RSA PRIVATE KEY-----
     ";
 
+    #[cfg(feature = "rsa")]
     const RSA_PK_PEM: &str = r"
 -----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyqq0N5u8Jvl+BLH2VMP/
@@ -420,6 +422,7 @@ a3t0cyDKinOY7JGIwh8DWAa4pfEzgg56yLcilYSSohXeaQV0nR8+rm9J8GUYXjPK
             .unwrap();
     }
 
+    #[cfg(feature = "rsa")]
     #[test]
     fn rs256() {
         let key_pair = RS256KeyPair::from_pem(RSA_KP_PEM).unwrap();
@@ -432,6 +435,7 @@ a3t0cyDKinOY7JGIwh8DWAa4pfEzgg56yLcilYSSohXeaQV0nR8+rm9J8GUYXjPK
         let _e = Base64::decode_to_vec(hex_e, None).unwrap();
     }
 
+    #[cfg(feature = "rsa")]
     #[test]
     fn ps384() {
         let key_pair = PS384KeyPair::generate(2048).unwrap();
