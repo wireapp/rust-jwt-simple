@@ -71,7 +71,10 @@ impl AsRef<ed25519_compact::KeyPair> for Edwards25519KeyPair {
 
 impl Edwards25519KeyPair {
     pub fn from_bytes(raw: &[u8]) -> Result<Self, Error> {
-        let ed25519_kp = ed25519_compact::KeyPair::from_slice(raw)?;
+        let ed25519_kp = match ed25519_compact::KeyPair::from_slice(raw) {
+            Ok(kp) => kp,
+            Err(_) => ed25519_compact::KeyPair::from_seed(ed25519_compact::Seed::from_slice(raw)?),
+        };
         Ok(Edwards25519KeyPair {
             ed25519_kp,
             metadata: None,
