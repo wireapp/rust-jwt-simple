@@ -1,9 +1,15 @@
 use std::convert::TryFrom;
 
 use ct_codecs::{Base64UrlSafeNoPadding, Encoder};
-use p384::ecdsa::{self, signature::DigestVerifier as _, signature::RandomizedDigestSigner as _};
-use p384::pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey, EncodePublicKey};
-use p384::NonZeroScalar;
+
+use ecdsa::signature::{
+    digest::FixedOutput,
+    hazmat::{PrehashVerifier, RandomizedPrehashSigner},
+};
+use p521::{
+    pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey, EncodePublicKey},
+    NistP521, NonZeroScalar,
+};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::claims::*;
@@ -14,33 +20,45 @@ use crate::error::*;
 use crate::jwt_header::*;
 use crate::token::*;
 
-#[doc(hidden)]
-#[derive(Debug, Clone)]
-pub struct P384PublicKey(ecdsa::VerifyingKey);
+type P521VerifyingKey = ecdsa::VerifyingKey<NistP521>;
+type P521SigningKey = ecdsa::SigningKey<NistP521>;
 
-impl AsRef<ecdsa::VerifyingKey> for P384PublicKey {
-    fn as_ref(&self) -> &ecdsa::VerifyingKey {
+#[doc(hidden)]
+#[derive(Clone)]
+pub struct P521PublicKey(P521VerifyingKey);
+
+impl std::fmt::Debug for P521PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("P521PublicKey")
+            .field("key", &"[public key]")
+            .finish()
+    }
+}
+
+impl AsRef<P521VerifyingKey> for P521PublicKey {
+    fn as_ref(&self) -> &P521VerifyingKey {
         &self.0
     }
 }
 
-impl P384PublicKey {
+impl P521PublicKey {
     pub fn from_bytes(raw: &[u8]) -> Result<Self, Error> {
-        let p384_pk =
-            ecdsa::VerifyingKey::from_sec1_bytes(raw).map_err(|_| JWTError::InvalidPublicKey)?;
-        Ok(P384PublicKey(p384_pk))
+        let p521_pk =
+            P521VerifyingKey::from_sec1_bytes(raw).map_err(|_| JWTError::InvalidPublicKey)?;
+        Ok(P521PublicKey(p521_pk))
     }
 
     pub fn from_der(der: &[u8]) -> Result<Self, Error> {
-        let p384_pk = ecdsa::VerifyingKey::from_public_key_der(der)
-            .map_err(|_| JWTError::InvalidPublicKey)?;
-        Ok(P384PublicKey(p384_pk))
+        let p521_pk =
+            P521VerifyingKey::from_public_key_der(der).map_err(|_| JWTError::InvalidPublicKey)?;
+
+        Ok(P521PublicKey(p521_pk))
     }
 
     pub fn from_pem(pem: &str) -> Result<Self, Error> {
-        let p384_pk = ecdsa::VerifyingKey::from_public_key_pem(pem)
-            .map_err(|_| JWTError::InvalidPublicKey)?;
-        Ok(P384PublicKey(p384_pk))
+        let p521_pk =
+            P521VerifyingKey::from_public_key_pem(pem).map_err(|_| JWTError::InvalidPublicKey)?;
+        Ok(P521PublicKey(p521_pk))
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -52,8 +70,8 @@ impl P384PublicKey {
     }
 
     pub fn to_der(&self) -> Result<Vec<u8>, Error> {
-        let p384_pk = p384::PublicKey::from(self.0);
-        Ok(p384_pk
+        Ok(self
+            .0
             .to_public_key_der()
             .map_err(|_| JWTError::InvalidPublicKey)?
             .as_ref()
@@ -61,64 +79,62 @@ impl P384PublicKey {
     }
 
     pub fn to_pem(&self) -> Result<String, Error> {
-        let p384_pk = p384::PublicKey::from(self.0);
-        Ok(p384_pk
+        let p521_pk = p521::PublicKey::from(self.0);
+        Ok(p521_pk
             .to_public_key_pem(Default::default())
             .map_err(|_| JWTError::InvalidPublicKey)?)
     }
 }
 
 #[doc(hidden)]
-pub struct P384KeyPair {
-    p384_sk: ecdsa::SigningKey,
+pub struct P521KeyPair {
+    p521_sk: P521SigningKey,
     metadata: Option<KeyMetadata>,
 }
 
-impl AsRef<ecdsa::SigningKey> for P384KeyPair {
-    fn as_ref(&self) -> &ecdsa::SigningKey {
-        &self.p384_sk
+impl AsRef<P521SigningKey> for P521KeyPair {
+    fn as_ref(&self) -> &P521SigningKey {
+        &self.p521_sk
     }
 }
 
-impl P384KeyPair {
+impl P521KeyPair {
     pub fn from_bytes(raw: &[u8]) -> Result<Self, Error> {
-        let p384_sk = ecdsa::SigningKey::from_slice(raw).map_err(|_| JWTError::InvalidKeyPair)?;
-        Ok(P384KeyPair {
-            p384_sk,
+        let p521_sk = P521SigningKey::from_slice(raw).map_err(|_| JWTError::InvalidKeyPair)?;
+        Ok(P521KeyPair {
+            p521_sk,
             metadata: None,
         })
     }
 
     pub fn from_der(der: &[u8]) -> Result<Self, Error> {
-        let p384_sk =
-            ecdsa::SigningKey::from_pkcs8_der(der).map_err(|_| JWTError::InvalidKeyPair)?;
-        Ok(P384KeyPair {
-            p384_sk,
+        let p521_sk = P521SigningKey::from_pkcs8_der(der).map_err(|_| JWTError::InvalidKeyPair)?;
+        Ok(P521KeyPair {
+            p521_sk,
             metadata: None,
         })
     }
 
     pub fn from_pem(pem: &str) -> Result<Self, Error> {
-        let p384_sk =
-            ecdsa::SigningKey::from_pkcs8_pem(pem).map_err(|_| JWTError::InvalidKeyPair)?;
-        Ok(P384KeyPair {
-            p384_sk,
+        let p521_sk = P521SigningKey::from_pkcs8_pem(pem).map_err(|_| JWTError::InvalidKeyPair)?;
+        Ok(P521KeyPair {
+            p521_sk,
             metadata: None,
         })
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.p384_sk.to_bytes().to_vec()
+        self.p521_sk.to_bytes().to_vec()
     }
 
     pub fn to_der(&self) -> Result<Vec<u8>, Error> {
-        let scalar = NonZeroScalar::from_repr(self.p384_sk.to_bytes());
+        let scalar = NonZeroScalar::from_repr(self.p521_sk.to_bytes());
         if bool::from(scalar.is_none()) {
             return Err(JWTError::InvalidKeyPair.into());
         }
-        let p384_sk =
-            p384::SecretKey::from(NonZeroScalar::from_repr(scalar.unwrap().into()).unwrap());
-        Ok(p384_sk
+        let p521_sk =
+            P521SigningKey::from(NonZeroScalar::from_repr(scalar.unwrap().into()).unwrap());
+        Ok(p521_sk
             .to_pkcs8_der()
             .map_err(|_| JWTError::InvalidKeyPair)?
             .as_bytes()
@@ -126,36 +142,36 @@ impl P384KeyPair {
     }
 
     pub fn to_pem(&self) -> Result<String, Error> {
-        let scalar = NonZeroScalar::from_repr(self.p384_sk.to_bytes());
+        let scalar = NonZeroScalar::from_repr(self.p521_sk.to_bytes());
         if bool::from(scalar.is_none()) {
             return Err(JWTError::InvalidKeyPair.into());
         }
-        let p384_sk =
-            p384::SecretKey::from(NonZeroScalar::from_repr(scalar.unwrap().into()).unwrap());
-        Ok(p384_sk
+        let p521_sk =
+            P521SigningKey::from(NonZeroScalar::from_repr(scalar.unwrap().into()).unwrap());
+        Ok(p521_sk
             .to_pkcs8_pem(Default::default())
             .map_err(|_| JWTError::InvalidKeyPair)?
             .to_string())
     }
 
-    pub fn public_key(&self) -> P384PublicKey {
-        let p384_sk = self.p384_sk.verifying_key();
-        P384PublicKey(*p384_sk)
+    pub fn public_key(&self) -> P521PublicKey {
+        let p521_sk = self.p521_sk.verifying_key();
+        P521PublicKey(*p521_sk)
     }
 
     pub fn generate() -> Self {
         let mut rng = rand::thread_rng();
-        let p384_sk = ecdsa::SigningKey::random(&mut rng);
-        P384KeyPair {
-            p384_sk,
+        let p521_sk = P521SigningKey::random(&mut rng);
+        P521KeyPair {
+            p521_sk,
             metadata: None,
         }
     }
 }
 
-pub trait ECDSAP384KeyPairLike {
+pub trait ECDSAP521KeyPairLike {
     fn jwt_alg_name() -> &'static str;
-    fn key_pair(&self) -> &P384KeyPair;
+    fn key_pair(&self) -> &P521KeyPair;
     fn key_id(&self) -> &Option<String>;
     fn metadata(&self) -> &Option<KeyMetadata>;
     fn attach_metadata(&mut self, metadata: KeyMetadata) -> Result<(), Error>;
@@ -175,21 +191,23 @@ pub trait ECDSAP384KeyPairLike {
     ) -> Result<String, Error> {
         let jwt_header = header.with_metadata(self.metadata());
         Token::build(&jwt_header, claims, |authenticated| {
-            let mut digest = hmac_sha512::sha384::Hash::new();
+            let mut digest = hmac_sha512::Hash::new();
             digest.update(authenticated.as_bytes());
             let mut rng = rand::thread_rng();
-            let signature: ecdsa::Signature = self
-                .key_pair()
-                .as_ref()
-                .sign_digest_with_rng(&mut rng, digest);
+
+            let sk = self.key_pair().as_ref().clone();
+            let sk = p521::ecdsa::SigningKey::from(sk);
+
+            let signature: p521::ecdsa::Signature =
+                sk.sign_prehash_with_rng(&mut rng, &digest.finalize_fixed())?;
             Ok(signature.to_vec())
         })
     }
 }
 
-pub trait ECDSAP384PublicKeyLike {
+pub trait ECDSAP521PublicKeyLike {
     fn jwt_alg_name() -> &'static str;
-    fn public_key(&self) -> &P384PublicKey;
+    fn public_key(&self) -> &P521PublicKey;
     fn key_id(&self) -> &Option<String>;
     fn set_key_id(&mut self, key_id: String);
 
@@ -205,11 +223,11 @@ pub trait ECDSAP384PublicKeyLike {
             |authenticated, signature| {
                 let ecdsa_signature = ecdsa::Signature::try_from(signature)
                     .map_err(|_| JWTError::InvalidSignature)?;
-                let mut digest = hmac_sha512::sha384::Hash::new();
+                let mut digest = hmac_sha512::Hash::new();
                 digest.update(authenticated.as_bytes());
                 self.public_key()
                     .as_ref()
-                    .verify_digest(digest, &ecdsa_signature)
+                    .verify_prehash(&digest.finalize_fixed(), &ecdsa_signature)
                     .map_err(|_| JWTError::InvalidSignature)?;
                 Ok(())
             },
@@ -229,11 +247,11 @@ pub trait ECDSAP384PublicKeyLike {
             |authenticated, signature| {
                 let ecdsa_signature = ecdsa::Signature::try_from(signature)
                     .map_err(|_| JWTError::InvalidSignature)?;
-                let mut digest = hmac_sha512::sha384::Hash::new();
+                let mut digest = hmac_sha512::Hash::new();
                 digest.update(authenticated.as_bytes());
                 self.public_key()
                     .as_ref()
-                    .verify_digest(digest, &ecdsa_signature)
+                    .verify_prehash(&digest.finalize_fixed(), &ecdsa_signature)
                     .map_err(|_| JWTError::InvalidSignature)?;
                 Ok(())
             },
@@ -251,23 +269,23 @@ pub trait ECDSAP384PublicKeyLike {
     }
 }
 
-pub struct ES384KeyPair {
-    key_pair: P384KeyPair,
+pub struct ES512KeyPair {
+    key_pair: P521KeyPair,
     key_id: Option<String>,
 }
 
 #[derive(Debug, Clone)]
-pub struct ES384PublicKey {
-    pk: P384PublicKey,
+pub struct ES512PublicKey {
+    pk: P521PublicKey,
     key_id: Option<String>,
 }
 
-impl ECDSAP384KeyPairLike for ES384KeyPair {
+impl ECDSAP521KeyPairLike for ES512KeyPair {
     fn jwt_alg_name() -> &'static str {
-        "ES384"
+        "ES512"
     }
 
-    fn key_pair(&self) -> &P384KeyPair {
+    fn key_pair(&self) -> &P521KeyPair {
         &self.key_pair
     }
 
@@ -285,24 +303,24 @@ impl ECDSAP384KeyPairLike for ES384KeyPair {
     }
 }
 
-impl ES384KeyPair {
+impl ES512KeyPair {
     pub fn from_bytes(raw: &[u8]) -> Result<Self, Error> {
-        Ok(ES384KeyPair {
-            key_pair: P384KeyPair::from_bytes(raw)?,
+        Ok(ES512KeyPair {
+            key_pair: P521KeyPair::from_bytes(raw)?,
             key_id: None,
         })
     }
 
     pub fn from_der(der: &[u8]) -> Result<Self, Error> {
-        Ok(ES384KeyPair {
-            key_pair: P384KeyPair::from_der(der)?,
+        Ok(ES512KeyPair {
+            key_pair: P521KeyPair::from_der(der)?,
             key_id: None,
         })
     }
 
     pub fn from_pem(pem: &str) -> Result<Self, Error> {
-        Ok(ES384KeyPair {
-            key_pair: P384KeyPair::from_pem(pem)?,
+        Ok(ES512KeyPair {
+            key_pair: P521KeyPair::from_pem(pem)?,
             key_id: None,
         })
     }
@@ -319,16 +337,16 @@ impl ES384KeyPair {
         self.key_pair.to_pem()
     }
 
-    pub fn public_key(&self) -> ES384PublicKey {
-        ES384PublicKey {
+    pub fn public_key(&self) -> ES512PublicKey {
+        ES512PublicKey {
             pk: self.key_pair.public_key(),
             key_id: self.key_id.clone(),
         }
     }
 
     pub fn generate() -> Self {
-        ES384KeyPair {
-            key_pair: P384KeyPair::generate(),
+        ES512KeyPair {
+            key_pair: P521KeyPair::generate(),
             key_id: None,
         }
     }
@@ -339,12 +357,12 @@ impl ES384KeyPair {
     }
 }
 
-impl ECDSAP384PublicKeyLike for ES384PublicKey {
+impl ECDSAP521PublicKeyLike for ES512PublicKey {
     fn jwt_alg_name() -> &'static str {
-        "ES384"
+        "ES512"
     }
 
-    fn public_key(&self) -> &P384PublicKey {
+    fn public_key(&self) -> &P521PublicKey {
         &self.pk
     }
 
@@ -357,24 +375,24 @@ impl ECDSAP384PublicKeyLike for ES384PublicKey {
     }
 }
 
-impl ES384PublicKey {
+impl ES512PublicKey {
     pub fn from_bytes(raw: &[u8]) -> Result<Self, Error> {
-        Ok(ES384PublicKey {
-            pk: P384PublicKey::from_bytes(raw)?,
+        Ok(ES512PublicKey {
+            pk: P521PublicKey::from_bytes(raw)?,
             key_id: None,
         })
     }
 
     pub fn from_der(der: &[u8]) -> Result<Self, Error> {
-        Ok(ES384PublicKey {
-            pk: P384PublicKey::from_der(der)?,
+        Ok(ES512PublicKey {
+            pk: P521PublicKey::from_der(der)?,
             key_id: None,
         })
     }
 
     pub fn from_pem(pem: &str) -> Result<Self, Error> {
-        Ok(ES384PublicKey {
-            pk: P384PublicKey::from_pem(pem)?,
+        Ok(ES512PublicKey {
+            pk: P521PublicKey::from_pem(pem)?,
             key_id: None,
         })
     }
