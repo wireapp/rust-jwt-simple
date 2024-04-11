@@ -1,5 +1,6 @@
 use ct_codecs::{Base64UrlSafeNoPadding, Encoder};
-use hmac_sha512::sha384 as hmac_sha384;
+use digest::Digest;
+use hmac::Mac;
 use rand::RngCore;
 use serde::{de::DeserializeOwned, Serialize};
 use zeroize::Zeroize;
@@ -122,10 +123,8 @@ pub trait MACLike {
 
     fn create_key_id(&mut self) -> &str {
         self.set_key_id(
-            Base64UrlSafeNoPadding::encode_to_string(hmac_sha256::Hash::hash(
-                &self.key().to_bytes(),
-            ))
-            .unwrap(),
+            Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(&self.key().to_bytes()))
+                .unwrap(),
         );
         self.key_id().as_ref().map(|x| x.as_str()).unwrap()
     }
@@ -164,7 +163,10 @@ impl MACLike for HS256Key {
     }
 
     fn authentication_tag(&self, authenticated: &str) -> Vec<u8> {
-        hmac_sha256::HMAC::mac(authenticated.as_bytes(), self.key().as_ref()).to_vec()
+        let mut hmac =
+            hmac::SimpleHmac::<sha2::Sha256>::new_from_slice(self.key().as_ref()).unwrap();
+        hmac.update(authenticated.as_bytes());
+        hmac.finalize().into_bytes().to_vec()
     }
 }
 
@@ -226,7 +228,10 @@ impl MACLike for HS512Key {
     }
 
     fn authentication_tag(&self, authenticated: &str) -> Vec<u8> {
-        hmac_sha512::HMAC::mac(authenticated.as_bytes(), self.key().as_ref()).to_vec()
+        let mut hmac =
+            hmac::SimpleHmac::<sha2::Sha512>::new_from_slice(self.key().as_ref()).unwrap();
+        hmac.update(authenticated.as_bytes());
+        hmac.finalize().into_bytes().to_vec()
     }
 }
 
@@ -288,7 +293,10 @@ impl MACLike for HS384Key {
     }
 
     fn authentication_tag(&self, authenticated: &str) -> Vec<u8> {
-        hmac_sha384::HMAC::mac(authenticated.as_bytes(), self.key().as_ref()).to_vec()
+        let mut hmac =
+            hmac::SimpleHmac::<sha2::Sha384>::new_from_slice(self.key().as_ref()).unwrap();
+        hmac.update(authenticated.as_bytes());
+        hmac.finalize().into_bytes().to_vec()
     }
 }
 
