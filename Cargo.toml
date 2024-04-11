@@ -16,12 +16,12 @@ cwt = ["ciborium"]
 rsa = ["dep:rsa"]
 
 [dependencies]
-anyhow = "1.0.75"
-binstring = "0.1.1"
-ciborium = { version = "0.2.1", optional = true }
-coarsetime = "0.1.33"
+anyhow = "1.0"
+binstring = "0.1"
+ciborium = { version = "0.2", optional = true }
+coarsetime = "0.1"
 ct-codecs = "1.1.1"
-ed25519-compact = { version = "2.1", features = ["pem"] }
+ed25519-dalek = { version = "2.1", features = ["pem", "rand_core"] }
 hmac = "0.12"
 digest = "0.10"
 sha-1 = { version = "0.10", features = ["oid"] }
@@ -31,11 +31,11 @@ k256 = { version = "0.13.2", features = ["ecdsa", "std", "pkcs8", "pem"] }
 p256 = { version = "0.13.2", features = ["ecdsa", "std", "pkcs8", "pem"] }
 p384 = { version = "0.13.0", features = ["ecdsa", "std", "pkcs8", "pem"] }
 p521 = { version = "0.13.0", features = ["ecdsa", "std", "pkcs8", "pem"] }
-rand = "0.8.5"
-serde = { version = "1.0.193", features = ["derive"] }
-serde_json = "1.0.108"
-thiserror = "1.0.50"
-zeroize = "1.7.0"
+rand = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+zeroize = "1.7"
 getrandom = { version = "0.2", features = ["js"] }
 rsa = { version = "0.9", optional = true }
 spki = "0.7"

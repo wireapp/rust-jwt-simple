@@ -1,6 +1,10 @@
 use ct_codecs::{Base64UrlSafeNoPadding, Encoder};
 use digest::Digest;
+use ed25519_dalek::{pkcs8::spki::der::pem::LineEnding, Signer};
+use k256::pkcs8::{DecodePrivateKey, EncodePrivateKey};
 use serde::{de::DeserializeOwned, Serialize};
+use spki::{der::Encode, DecodePublicKey, EncodePublicKey};
+use std::convert::TryFrom;
 
 use crate::claims::*;
 use crate::common::*;
@@ -12,31 +16,31 @@ use crate::token::*;
 
 #[doc(hidden)]
 #[derive(Debug, Clone)]
-pub struct Edwards25519PublicKey(ed25519_compact::PublicKey);
+pub struct Edwards25519PublicKey(ed25519_dalek::VerifyingKey);
 
-impl AsRef<ed25519_compact::PublicKey> for Edwards25519PublicKey {
-    fn as_ref(&self) -> &ed25519_compact::PublicKey {
+impl AsRef<ed25519_dalek::VerifyingKey> for Edwards25519PublicKey {
+    fn as_ref(&self) -> &ed25519_dalek::VerifyingKey {
         &self.0
     }
 }
 
 impl Edwards25519PublicKey {
     pub fn from_bytes(raw: &[u8]) -> Result<Self, Error> {
-        let ed25519_pk = ed25519_compact::PublicKey::from_slice(raw);
+        let ed25519_pk = ed25519_dalek::VerifyingKey::try_from(raw);
         Ok(Edwards25519PublicKey(
             ed25519_pk.map_err(|_| JWTError::InvalidPublicKey)?,
         ))
     }
 
     pub fn from_der(der: &[u8]) -> Result<Self, Error> {
-        let ed25519_pk = ed25519_compact::PublicKey::from_der(der);
+        let ed25519_pk = ed25519_dalek::VerifyingKey::from_public_key_der(der);
         Ok(Edwards25519PublicKey(
             ed25519_pk.map_err(|_| JWTError::InvalidPublicKey)?,
         ))
     }
 
     pub fn from_pem(pem: &str) -> Result<Self, Error> {
-        let ed25519_pk = ed25519_compact::PublicKey::from_pem(pem);
+        let ed25519_pk = ed25519_dalek::VerifyingKey::from_public_key_pem(pem);
         Ok(Edwards25519PublicKey(
             ed25519_pk.map_err(|_| JWTError::InvalidPublicKey)?,
         ))
@@ -47,32 +51,37 @@ impl Edwards25519PublicKey {
     }
 
     pub fn to_der(&self) -> Vec<u8> {
-        self.0.to_der()
+        self.0.to_public_key_der().unwrap().to_der().unwrap()
     }
 
     pub fn to_pem(&self) -> String {
-        self.0.to_pem()
+        self.0.to_public_key_pem(LineEnding::LF).unwrap()
     }
 }
 
 #[doc(hidden)]
 #[derive(Clone)]
 pub struct Edwards25519KeyPair {
-    ed25519_kp: ed25519_compact::KeyPair,
+    ed25519_kp: ed25519_dalek::SigningKey,
     metadata: Option<KeyMetadata>,
 }
 
-impl AsRef<ed25519_compact::KeyPair> for Edwards25519KeyPair {
-    fn as_ref(&self) -> &ed25519_compact::KeyPair {
+impl AsRef<ed25519_dalek::SigningKey> for Edwards25519KeyPair {
+    fn as_ref(&self) -> &ed25519_dalek::SigningKey {
         &self.ed25519_kp
     }
 }
 
 impl Edwards25519KeyPair {
     pub fn from_bytes(raw: &[u8]) -> Result<Self, Error> {
-        let ed25519_kp = match ed25519_compact::KeyPair::from_slice(raw) {
+        let ed25519_kp = match ed25519_dalek::SigningKey::try_from(raw) {
             Ok(kp) => kp,
-            Err(_) => ed25519_compact::KeyPair::from_seed(ed25519_compact::Seed::from_slice(raw)?),
+            Err(_) => {
+                let mut kp = zeroize::Zeroizing::new([0u8; 64]);
+                let len = std::cmp::min(raw.len(), 64);
+                kp.copy_from_slice(&raw[..len]);
+                ed25519_dalek::SigningKey::from_keypair_bytes(&kp)?
+            }
         };
         Ok(Edwards25519KeyPair {
             ed25519_kp,
@@ -81,12 +90,7 @@ impl Edwards25519KeyPair {
     }
 
     pub fn from_der(der: &[u8]) -> Result<Self, Error> {
-        let ed25519_kp = match ed25519_compact::KeyPair::from_der(der) {
-            Ok(kp) => kp,
-            Err(_) => ed25519_compact::KeyPair::from_seed(
-                ed25519_compact::SecretKey::from_der(der)?.seed(),
-            ),
-        };
+        let ed25519_kp = ed25519_dalek::SigningKey::from_pkcs8_der(der)?;
         Ok(Edwards25519KeyPair {
             ed25519_kp,
             metadata: None,
@@ -94,12 +98,7 @@ impl Edwards25519KeyPair {
     }
 
     pub fn from_pem(pem: &str) -> Result<Self, Error> {
-        let ed25519_kp = match ed25519_compact::KeyPair::from_pem(pem) {
-            Ok(kp) => kp,
-            Err(_) => ed25519_compact::KeyPair::from_seed(
-                ed25519_compact::SecretKey::from_pem(pem)?.seed(),
-            ),
-        };
+        let ed25519_kp = ed25519_dalek::SigningKey::from_pkcs8_pem(pem)?;
         Ok(Edwards25519KeyPair {
             ed25519_kp,
             metadata: None,
@@ -107,24 +106,27 @@ impl Edwards25519KeyPair {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        self.ed25519_kp.to_vec()
+        self.ed25519_kp.to_bytes().to_vec()
     }
 
     pub fn to_der(&self) -> Vec<u8> {
-        self.ed25519_kp.sk.to_der()
+        self.ed25519_kp.to_pkcs8_der().unwrap().to_bytes().to_vec()
     }
 
     pub fn to_pem(&self) -> String {
-        self.ed25519_kp.to_pem()
+        self.ed25519_kp
+            .to_pkcs8_pem(LineEnding::LF)
+            .unwrap()
+            .to_string()
     }
 
     pub fn public_key(&self) -> Edwards25519PublicKey {
-        let ed25519_pk = self.ed25519_kp.pk;
+        let ed25519_pk = self.ed25519_kp.verifying_key();
         Edwards25519PublicKey(ed25519_pk)
     }
 
     pub fn generate() -> Self {
-        let ed25519_kp = ed25519_compact::KeyPair::from_seed(ed25519_compact::Seed::generate());
+        let ed25519_kp = ed25519_dalek::SigningKey::generate(&mut rand::thread_rng());
         Edwards25519KeyPair {
             ed25519_kp,
             metadata: None,
@@ -154,8 +156,8 @@ pub trait EdDSAKeyPairLike {
     ) -> Result<String, Error> {
         let jwt_header = header.with_metadata(self.metadata());
         Token::build(&jwt_header, claims, |authenticated| {
-            let noise = ed25519_compact::Noise::generate();
-            let signature = self.key_pair().as_ref().sk.sign(authenticated, Some(noise));
+            let signature = self.key_pair().ed25519_kp.sign(authenticated.as_bytes());
+
             Ok(signature.to_vec())
         })
     }
@@ -177,10 +179,10 @@ pub trait EdDSAPublicKeyLike {
             token,
             options,
             |authenticated, signature| {
-                let ed25519_signature = ed25519_compact::Signature::from_slice(signature)?;
+                let ed25519_signature = ed25519_dalek::Signature::from_slice(signature)?;
                 self.public_key()
                     .as_ref()
-                    .verify(authenticated, &ed25519_signature)
+                    .verify_strict(authenticated.as_bytes(), &ed25519_signature)
                     .map_err(|_| JWTError::InvalidSignature)?;
                 Ok(())
             },
@@ -198,10 +200,10 @@ pub trait EdDSAPublicKeyLike {
             token,
             options,
             |authenticated, signature| {
-                let ed25519_signature = ed25519_compact::Signature::from_slice(signature)?;
+                let ed25519_signature = ed25519_dalek::Signature::from_slice(signature)?;
                 self.public_key()
                     .as_ref()
-                    .verify(authenticated, &ed25519_signature)
+                    .verify_strict(authenticated.as_bytes(), &ed25519_signature)
                     .map_err(|_| JWTError::InvalidSignature)?;
                 Ok(())
             },
