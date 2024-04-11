@@ -1,7 +1,8 @@
-use benchmark_simple::*;
-use jwt_simple::prelude::*;
-
+#[cfg(feature = "rsa")]
 fn main() {
+    use benchmark_simple::*;
+    use jwt_simple::prelude::*;
+
     let bench = Bench::new();
 
     let options = &Options {
@@ -27,3 +28,6 @@ fn main() {
     });
     println!("rsa-2048 - verify: {}", res.throughput(1));
 }
+
+#[cfg(not(feature = "rsa"))]
+fn main() {}
