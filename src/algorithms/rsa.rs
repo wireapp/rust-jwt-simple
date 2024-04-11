@@ -423,12 +423,12 @@ impl RS256PublicKey {
     }
 
     pub fn sha1_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 
     pub fn sha256_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 }
@@ -595,12 +595,12 @@ impl RS512PublicKey {
     }
 
     pub fn sha1_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 
     pub fn sha256_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 }
@@ -767,12 +767,12 @@ impl RS384PublicKey {
     }
 
     pub fn sha1_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 
     pub fn sha256_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 }
@@ -1101,12 +1101,12 @@ impl PS512PublicKey {
     }
 
     pub fn sha1_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 
     pub fn sha256_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 }
@@ -1273,12 +1273,12 @@ impl PS384PublicKey {
     }
 
     pub fn sha1_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 
     pub fn sha256_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(&self.pk.to_der().unwrap()))
+        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(self.pk.to_der().unwrap()))
             .unwrap()
     }
 }

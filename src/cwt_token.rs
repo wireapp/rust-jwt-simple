@@ -129,8 +129,7 @@ impl<CustomClaims> JWTClaims<CustomClaims> {
                     let ts: u64 = if let Some(ts) = value.as_integer() {
                         ts.try_into().map_err(|_| JWTError::CWTDecodingError)?
                     } else if let Some(ts) = value.as_float() {
-                        let f: f64 = ts.try_into().map_err(|_| JWTError::CWTDecodingError)?;
-                        f.round() as _
+                        ts.round() as _
                     } else {
                         bail!(JWTError::CWTDecodingError)
                     };
@@ -140,8 +139,7 @@ impl<CustomClaims> JWTClaims<CustomClaims> {
                     let ts: u64 = if let Some(ts) = value.as_integer() {
                         ts.try_into().map_err(|_| JWTError::CWTDecodingError)?
                     } else if let Some(ts) = value.as_float() {
-                        let f: f64 = ts.try_into().map_err(|_| JWTError::CWTDecodingError)?;
-                        f.round() as _
+                        ts.round() as _
                     } else {
                         bail!(JWTError::CWTDecodingError)
                     };
@@ -151,8 +149,7 @@ impl<CustomClaims> JWTClaims<CustomClaims> {
                     let ts: u64 = if let Some(ts) = value.as_integer() {
                         ts.try_into().map_err(|_| JWTError::CWTDecodingError)?
                     } else if let Some(ts) = value.as_float() {
-                        let f: f64 = ts.try_into().map_err(|_| JWTError::CWTDecodingError)?;
-                        f.round() as _
+                        ts.round() as _
                     } else {
                         bail!(JWTError::CWTDecodingError)
                     };
