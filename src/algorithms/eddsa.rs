@@ -1,6 +1,5 @@
 use ct_codecs::{Base64UrlSafeNoPadding, Encoder};
-use hmac_sha1_compact::Hash as SHA1;
-use hmac_sha256::Hash as SHA256;
+use digest::Digest;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::claims::*;
@@ -211,7 +210,7 @@ pub trait EdDSAPublicKeyLike {
 
     fn create_key_id(&mut self) -> &str {
         self.set_key_id(
-            Base64UrlSafeNoPadding::encode_to_string(hmac_sha256::Hash::hash(
+            Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(
                 &self.public_key().to_bytes(),
             ))
             .unwrap(),
@@ -367,10 +366,10 @@ impl Ed25519PublicKey {
     }
 
     pub fn sha1_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(SHA1::hash(&self.pk.to_der())).unwrap()
+        Base64UrlSafeNoPadding::encode_to_string(sha1::Sha1::digest(&self.pk.to_der())).unwrap()
     }
 
     pub fn sha256_thumbprint(&self) -> String {
-        Base64UrlSafeNoPadding::encode_to_string(SHA256::hash(&self.pk.to_der())).unwrap()
+        Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(&self.pk.to_der())).unwrap()
     }
 }

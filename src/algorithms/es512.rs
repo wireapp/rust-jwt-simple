@@ -1,3 +1,4 @@
+use digest::Digest;
 use std::convert::TryFrom;
 
 use ct_codecs::{Base64UrlSafeNoPadding, Encoder};
@@ -191,7 +192,7 @@ pub trait ECDSAP521KeyPairLike {
     ) -> Result<String, Error> {
         let jwt_header = header.with_metadata(self.metadata());
         Token::build(&jwt_header, claims, |authenticated| {
-            let mut digest = hmac_sha512::Hash::new();
+            let mut digest = sha2::Sha512::new();
             digest.update(authenticated.as_bytes());
             let mut rng = rand::thread_rng();
 
@@ -223,7 +224,7 @@ pub trait ECDSAP521PublicKeyLike {
             |authenticated, signature| {
                 let ecdsa_signature = ecdsa::Signature::try_from(signature)
                     .map_err(|_| JWTError::InvalidSignature)?;
-                let mut digest = hmac_sha512::Hash::new();
+                let mut digest = sha2::Sha512::new();
                 digest.update(authenticated.as_bytes());
                 self.public_key()
                     .as_ref()
@@ -247,7 +248,7 @@ pub trait ECDSAP521PublicKeyLike {
             |authenticated, signature| {
                 let ecdsa_signature = ecdsa::Signature::try_from(signature)
                     .map_err(|_| JWTError::InvalidSignature)?;
-                let mut digest = hmac_sha512::Hash::new();
+                let mut digest = sha2::Sha512::new();
                 digest.update(authenticated.as_bytes());
                 self.public_key()
                     .as_ref()
@@ -260,7 +261,7 @@ pub trait ECDSAP521PublicKeyLike {
 
     fn create_key_id(&mut self) -> &str {
         self.set_key_id(
-            Base64UrlSafeNoPadding::encode_to_string(hmac_sha256::Hash::hash(
+            Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(
                 &self.public_key().to_bytes(),
             ))
             .unwrap(),
