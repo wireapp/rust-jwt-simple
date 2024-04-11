@@ -123,7 +123,7 @@ pub trait MACLike {
 
     fn create_key_id(&mut self) -> &str {
         self.set_key_id(
-            Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(&self.key().to_bytes()))
+            Base64UrlSafeNoPadding::encode_to_string(sha2::Sha256::digest(self.key().to_bytes()))
                 .unwrap(),
         );
         self.key_id().as_ref().map(|x| x.as_str()).unwrap()
